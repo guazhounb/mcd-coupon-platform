@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>麦麦优惠管家 · 优惠点餐一体化</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="app">
     <!-- 顶部品牌栏 -->
     <header class="topbar" id="topbar" style="display:none">
       <div class="brand">
@@ -16,7 +16,12 @@
         </span>
         <span class="brand-name">麦麦优惠管家</span>
       </div>
-      <div class="account" id="accountTag"></div>
+      <div class="topbar-right">
+        <div class="account" id="accountTag"></div>
+        <button class="icon-btn" id="btnFullscreen" title="全屏显示" aria-label="全屏显示">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        </button>
+      </div>
     </header>
 
     <!-- 屏幕：登录 -->
@@ -27,15 +32,41 @@
         </div>
         <h1 class="login-title">麦麦优惠管家</h1>
         <p class="login-sub">优惠点餐一体化平台 · 领券 · 点餐 · 省钱</p>
-        <div class="form">
-          <label>麦当劳会员账号</label>
-          <input id="loginAccount" type="text" placeholder="请输入账号" autocomplete="username" />
-          <label>密码</label>
-          <input id="loginPassword" type="password" placeholder="请输入密码" autocomplete="current-password" />
-          <button class="btn btn-primary" id="btnLogin">登 录</button>
+
+        <!-- 登录方式选项卡 -->
+        <div class="seg login-tabs" id="loginTabs">
+          <button class="seg-btn active" data-tab="account">账号登录</button>
+          <button class="seg-btn" data-tab="qr">扫码登录</button>
         </div>
-        <p class="login-note">登录即授权使用您的会员权益，开启一键领券与点餐。</p>
-        <p class="login-err" id="loginErr"></p>
+
+        <!-- 账号登录 -->
+        <div class="login-panel" id="accountPanel">
+          <div class="form">
+            <label>麦当劳会员账号</label>
+            <input id="loginAccount" type="text" placeholder="请输入账号" autocomplete="username" />
+            <label>密码</label>
+            <input id="loginPassword" type="password" placeholder="请输入密码" autocomplete="current-password" />
+            <button class="btn btn-primary" id="btnLogin">登 录</button>
+          </div>
+          <p class="login-note">登录即授权使用您的会员权益，开启一键领券与点餐。</p>
+          <p class="login-err" id="loginErr"></p>
+        </div>
+
+        <!-- 扫码登录 -->
+        <div class="login-panel" id="qrPanel" style="display:none">
+          <div class="qr-card">
+            <div class="qr-frame">
+              <img id="qrImg" class="qr-img" alt="扫码登录二维码" />
+            </div>
+            <p class="qr-tip" id="qrTip">请使用 <b>麦当劳 App</b> 扫码授权登录</p>
+            <p class="qr-sub">打开 App → 我的 → 扫一扫，授权后即可免密登录</p>
+            <div class="qr-actions">
+              <button class="btn btn-ghost" id="btnQrRefresh">刷新二维码</button>
+              <button class="btn btn-gold" id="btnQrConfirm">我已在 App 完成授权</button>
+            </div>
+          </div>
+          <p class="login-note">扫码登录更安全，无需输入账号密码。</p>
+        </div>
       </div>
     </section>
 
@@ -48,6 +79,29 @@
           <button class="seg-btn" data-be="5">得来速</button>
           <button class="seg-btn" data-be="2">麦乐送</button>
           <button class="seg-btn" data-be="6">企业团餐</button>
+        </div>
+
+        <!-- 自动定位 -->
+        <button class="btn btn-gold btn-locate" id="btnLocate">
+          <span class="locate-ico">📍</span> 自动获取当前位置
+        </button>
+        <p class="locate-hint" id="locateHint">授权定位后，自动为您查找附近门店</p>
+
+        <!-- 手动选择城市（选项卡） -->
+        <div class="city-picker" id="cityPicker">
+          <div class="field-label">或手动选择城市</div>
+          <div class="city-chips" id="cityChips">
+            <button class="chip" data-city="北京">北京</button>
+            <button class="chip" data-city="上海">上海</button>
+            <button class="chip" data-city="广州">广州</button>
+            <button class="chip" data-city="深圳">深圳</button>
+            <button class="chip" data-city="成都">成都</button>
+            <button class="chip" data-city="杭州">杭州</button>
+            <button class="chip" data-city="武汉">武汉</button>
+            <button class="chip" data-city="西安">西安</button>
+            <button class="chip" data-city="重庆">重庆</button>
+            <button class="chip" data-city="南京">南京</button>
+          </div>
         </div>
 
         <!-- 到店 / 得来速：按位置搜门店 -->
@@ -146,8 +200,30 @@
         <div class="order-done">
           <div class="check">✓</div>
           <h2>下单成功</h2>
-          <p class="muted">请按支付链接完成付款</p>
+          <p class="muted">请完成支付以锁定订单</p>
         </div>
+
+        <!-- 在线支付区 -->
+        <div class="pay-card" id="payCard">
+          <div class="pay-head">
+            <span class="pay-amt" id="payAmount">¥0.00</span>
+            <span class="pay-label">待支付</span>
+          </div>
+          <div id="payOnline" class="pay-online">
+            <button class="btn btn-gold" id="btnPayNow">立即在线支付</button>
+            <div class="pay-qr-wrap" id="payQrWrap" style="display:none">
+              <div class="qr-frame"><img id="payQr" class="qr-img" alt="支付二维码" /></div>
+              <p class="qr-tip">使用 <b>麦当劳 App</b> 扫码完成支付</p>
+            </div>
+            <div class="pay-actions">
+              <button class="btn btn-ghost" id="btnCopyPay">复制支付链接</button>
+              <button class="btn btn-ghost" id="btnPayStatus">查询支付状态</button>
+            </div>
+            <p class="pay-note" id="payNote"></p>
+            <p class="pay-status" id="payStatusText"></p>
+          </div>
+        </div>
+
         <div id="orderInfo" class="order-info"></div>
         <div class="sticky-actions col">
           <button class="btn btn-gold" id="btnSaveImg">一键保存订单小票</button>
@@ -161,6 +237,7 @@
     <div id="toast" class="toast"></div>
   </div>
 
+  <script src="lib/qrcode.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
