@@ -1,0 +1,7 @@
+# 本地密钥与配置（切勿入库）
+local.config.json
+.env
+.env.*
+node_modules/
+*.log
+.DS_Store
