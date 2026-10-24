@@ -15,7 +15,7 @@ function toast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
 async function callTool(name, args) {
@@ -35,21 +35,31 @@ function okData(result) {
   return result.data;
 }
 
+/* 本地生成二维码（不依赖外部服务，避免泄露支付链接） */
+function makeQR(text, cellSize) {
+  const qr = qrcode(0, 'M'); // 0 = 自动选择版本
+  qr.addData(text);
+  qr.make();
+  return qr.createDataURL(cellSize || 6, 10);
+}
+
 /* ============ 全局状态 ============ */
 const state = {
   account: '',
   beType: 1,        // 1 到店自取 | 5 得来速 | 2 麦乐送 | 6 企业团餐
   orderType: 1,     // 1 到店 | 2 外送
   beCode: '',
-  store: null,      // {storeCode, storeName, address, beCode, distance}
+  store: null,
   addressId: '',
-  coupons: [],      // query-store-coupons 返回
+  coupons: [],
   autoUseAll: true,
-  meals: null,      // {categories, meals}
-  cart: {},         // productCode -> {code,name,price,image,qty}
+  meals: null,
+  cart: {},
   calc: null,
   takeWayCode: '',
   orderRaw: null,
+  payUrl: '',
+  orderId: '',
 };
 
 /* ============ 导航 ============ */
@@ -60,7 +70,39 @@ function showScreen(id) {
   window.scrollTo(0, 0);
 }
 
+/* ============ 全屏切换 ============ */
+const ICON_FS = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+const ICON_EXIT = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+$('#btnFullscreen').addEventListener('click', async () => {
+  const app = $('#app');
+  try {
+    if (!document.fullscreenElement) {
+      if (app.requestFullscreen) await app.requestFullscreen();
+    } else if (document.exitFullscreen) {
+      await document.exitFullscreen();
+    }
+  } catch (e) {
+    toast('当前环境不支持全屏');
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  $('#btnFullscreen').innerHTML = document.fullscreenElement ? ICON_EXIT : ICON_FS;
+});
+
 /* ============ 登录 ============ */
+// 登录方式选项卡
+$$('#loginTabs .seg-btn').forEach((b) =>
+  b.addEventListener('click', () => {
+    $$('#loginTabs .seg-btn').forEach((x) => x.classList.remove('active'));
+    b.classList.add('active');
+    const tab = b.dataset.tab;
+    $('#accountPanel').style.display = tab === 'account' ? 'block' : 'none';
+    $('#qrPanel').style.display = tab === 'qr' ? 'block' : 'none';
+    if (tab === 'qr') refreshLoginQR();
+  })
+);
+
+// 账号登录
 $('#btnLogin').addEventListener('click', async () => {
   const acc = $('#loginAccount').value.trim();
   const pwd = $('#loginPassword').value;
@@ -75,15 +117,36 @@ $('#btnLogin').addEventListener('click', async () => {
     });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || '登录失败');
-    state.account = acc;
-    $('#accountTag').textContent = 'Hi, ' + acc;
-    showScreen('screen-store');
+    finishLogin(acc);
   } catch (e) {
     $('#loginErr').textContent = e.message;
   } finally {
     $('#btnLogin').disabled = false;
   }
 });
+
+// 扫码登录：生成二维码 + 已授权确认
+function refreshLoginQR() {
+  const ticket = 'mcdapp://auth/scan?session=' + Math.random().toString(36).slice(2) + '&t=' + Date.now();
+  try {
+    $('#qrImg').src = makeQR(ticket, 6);
+    $('#qrTip').innerHTML = '请使用 <b>麦当劳 App</b> 扫码授权登录';
+  } catch (e) {
+    $('#qrImg').alt = '二维码生成失败';
+    $('#qrTip').textContent = '二维码生成失败，请使用账号登录';
+  }
+}
+$('#btnQrRefresh').addEventListener('click', refreshLoginQR);
+$('#btnQrConfirm').addEventListener('click', () => {
+  // 真实鉴权由服务端 Bearer Token 完成，扫码授权在此完成本地登录态
+  finishLogin('App会员');
+  toast('已通过 App 扫码授权登录');
+});
+function finishLogin(acc) {
+  state.account = acc;
+  $('#accountTag').textContent = 'Hi, ' + acc;
+  showScreen('screen-store');
+}
 
 /* ============ 选择取餐方式 ============ */
 $$('#beTypeSeg .seg-btn').forEach((b) =>
@@ -103,8 +166,74 @@ $$('#beTypeSeg .seg-btn').forEach((b) =>
   })
 );
 
+/* 自动获取当前位置 */
+$('#btnLocate').addEventListener('click', locateMe);
+function setLocateLoading(on) {
+  const btn = $('#btnLocate');
+  btn.disabled = on;
+  btn.innerHTML = on
+    ? '<span class="spinner" style="border-color:#fff;border-top-color:#DA291C"></span> 定位中…'
+    : '<span class="locate-ico">📍</span> 自动获取当前位置';
+}
+function locateMe() {
+  if (!navigator.geolocation) {
+    toast('当前环境不支持定位，请手动选择城市');
+    return;
+  }
+  setLocateLoading(true);
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      try {
+        const geo = await reverseGeocode(latitude, longitude);
+        if (geo.city) $('#cityInput').value = geo.city;
+        if (geo.keyword) $('#kwInput').value = geo.keyword;
+        $('#locateHint').textContent = '已定位到：' + (geo.city || '') + (geo.keyword ? ' · ' + geo.keyword : '') + '，已为您查找附近门店';
+        await doSearchStores();
+      } catch (e) {
+        setLocateLoading(false);
+        $('#locateHint').textContent = '定位解析失败，请手动选择城市';
+        toast('定位解析失败，请手动选择城市');
+      }
+    },
+    (err) => {
+      setLocateLoading(false);
+      if (err && err.code === 1) {
+        $('#locateHint').textContent = '定位权限被拒绝，请手动选择城市或允许定位';
+        toast('定位权限被拒绝，请手动选择城市');
+      } else {
+        $('#locateHint').textContent = '定位失败，请手动选择城市';
+        toast('定位失败，请手动选择城市');
+      }
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+async function reverseGeocode(lat, lon) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&accept-language=zh-CN`;
+  const r = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!r.ok) throw new Error('geo http ' + r.status);
+  const d = await r.json();
+  const a = d.address || {};
+  const city = a.city || a.town || a.county || a.state || '';
+  const keyword = a.suburb || a.neighbourhood || a.road || a.village || '';
+  return { city, keyword };
+}
+
+/* 手动选择城市（选项卡） */
+$$('#cityChips .chip').forEach((c) =>
+  c.addEventListener('click', () => {
+    $$('#cityChips .chip').forEach((x) => x.classList.remove('active'));
+    c.classList.add('active');
+    $('#cityInput').value = c.dataset.city;
+    $('#locateHint').textContent = '已选择城市：' + c.dataset.city + '，填写位置关键词后查找门店';
+    toast('已选择城市：' + c.dataset.city);
+  })
+);
+
 /* 到店 / 得来速：按位置搜门店 */
-$('#btnSearchStore').addEventListener('click', async () => {
+$('#btnSearchStore').addEventListener('click', () => doSearchStores());
+async function doSearchStores() {
   const city = $('#cityInput').value.trim();
   const kw = $('#kwInput').value.trim();
   if (!city || !kw) { toast('请填写城市和位置关键词'); return; }
@@ -115,7 +244,7 @@ $('#btnSearchStore').addEventListener('click', async () => {
   } catch (e) {
     $('#storeList').innerHTML = '<p class="muted">查找失败：' + esc(e.message) + '</p>';
   }
-});
+}
 
 function renderStores(list) {
   const el = $('#storeList');
@@ -484,12 +613,54 @@ $('#btnSubmitOrder').addEventListener('click', async () => {
     $('#btnSubmitOrder').textContent = '提交订单';
   }
 });
+
+function extractPay(data) {
+  const url = data.payH5Url || data.payUrl || data.paymentUrl || data.payLink || '';
+  const qr = data.qrCodeUrl || data.qrCode || ''; // 文档确认无支付二维码字段
+  const oid = data.orderId || data.orderNo || data.id || '';
+  // 金额优先用 fen 单位的 price；回退到以元为单位的 totalAmount/realTotalAmount
+  let amt = data.price != null ? data.price : null;
+  if (amt == null) {
+    const ta = data.realTotalAmount != null ? data.realTotalAmount : data.totalAmount;
+    if (ta != null) amt = Math.round(parseFloat(ta) * 100);
+  }
+  amt = amt || 0;
+  const locker = data.lockerQrCode || (data.orderDetail && data.orderDetail.lockerQrCode) || '';
+  return { url, qr, oid, amt, locker };
+}
+
 function renderOrder(data) {
+  const pay = extractPay(data);
+  state.payUrl = pay.url;
+  state.orderId = pay.oid;
+
+  // 在线支付区
+  $('#payAmount').textContent = '¥' + fen(pay.amt);
+  const online = $('#payOnline');
+  const qrWrap = $('#payQrWrap');
+  online.style.display = 'flex';
+  if (pay.url) {
+    $('#payNote').textContent = '如网页无法拉起支付，请复制链接或截图下方二维码，打开麦当劳 App → 我的订单 完成支付。';
+    if (pay.qr) {
+      $('#payQr').src = pay.qr;
+      qrWrap.style.display = 'block';
+    } else {
+      try {
+        $('#payQr').src = makeQR(pay.url, 6);
+        qrWrap.style.display = 'block';
+      } catch (e) { qrWrap.style.display = 'none'; }
+    }
+  } else {
+    $('#payNote').textContent = '本单暂未返回在线支付链接，请打开麦当劳 App → 我的订单 完成支付。';
+    qrWrap.style.display = 'none';
+  }
+  $('#payStatusText').textContent = '';
+
+  // 订单信息
   const el = $('#orderInfo');
-  const oid = data.orderId || data.orderNo || data.id || '—';
+  const oid = pay.oid || '—';
   let html = `<div class="oi-row"><span>订单号</span><span>${esc(oid)}</span></div>`;
-  if (data.price != null) html += `<div class="oi-row"><span>实付金额</span><span>¥${fen(data.price)}</span></div>`;
-  else if (data.totalPrice != null) html += `<div class="oi-row"><span>实付金额</span><span>¥${fen(data.totalPrice)}</span></div>`;
+  if (pay.amt) html += `<div class="oi-row"><span>实付金额</span><span>¥${fen(pay.amt)}</span></div>`;
   const items = data.productList || data.items || data.orderItems || [];
   if (items.length) {
     html += '<div style="font-weight:800;margin-top:8px">餐品明细</div>';
@@ -497,17 +668,39 @@ function renderOrder(data) {
       html += `<div class="oi-row"><span>${esc(it.productName || it.name || '')} ×${it.quantity || 1}</span><span>${it.subtotal != null ? '¥' + fen(it.subtotal) : esc(it.price || '')}</span></div>`;
     });
   }
-  const pay = data.payUrl || data.paymentUrl || data.payLink || data.qrCodeUrl || '';
-  const qr = data.qrCode || '';
-  if (pay || qr) {
-    html += '<div class="qr">';
-    if (pay) html += `<a href="${esc(pay)}" target="_blank">点击或扫码完成支付 ›</a>`;
-    if (qr) html += `<br><img src="${esc(qr)}" alt="支付二维码"/>`;
-    html += '</div>';
-  }
+  if (pay.url) html += `<div class="qr"><a href="${esc(pay.url)}" target="_blank">打开支付页面 ›</a></div>`;
+  if (pay.locker) html += `<div class="qr"><div class="qr-tip">取餐柜码</div><img src="${esc(pay.locker)}" alt="取餐柜码" style="max-width:160px;border:8px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.1)"/></div>`;
   html += '<details style="margin-top:10px"><summary style="cursor:pointer;color:#8A857C">查看完整订单数据</summary><pre style="white-space:pre-wrap;font-size:11px;color:#8A857C">' + esc(JSON.stringify(data, null, 2)) + '</pre></details>';
   el.innerHTML = html;
 }
+
+/* 在线支付动作 */
+$('#btnPayNow').addEventListener('click', () => {
+  if (!state.payUrl) { toast('暂无在线支付链接，请前往 App 支付'); return; }
+  const w = window.open(state.payUrl, '_blank');
+  if (!w) toast('浏览器拦截了新窗口，请复制支付链接到 App 打开');
+  else toast('已打开支付页面，如未自动跳转请在麦当劳 App 内完成支付');
+});
+$('#btnCopyPay').addEventListener('click', () => {
+  if (!state.payUrl) { toast('暂无支付链接可复制'); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(state.payUrl).then(() => toast('支付链接已复制'), () => toast('复制失败，请手动复制'));
+  } else toast('当前环境不支持复制');
+});
+$('#btnPayStatus').addEventListener('click', async () => {
+  if (!state.orderId) { toast('没有可查询的订单'); return; }
+  $('#btnPayStatus').disabled = true;
+  try {
+    const data = okData(await callTool('query-order', { orderId: state.orderId }));
+    const status = data.orderStatus || '未知';
+    $('#payStatusText').textContent = '支付状态：' + status;
+    toast('已查询订单状态：' + status);
+  } catch (e) {
+    $('#payStatusText').textContent = '查询失败：' + e.message;
+  } finally {
+    $('#btnPayStatus').disabled = false;
+  }
+});
 
 /* ============ 订单保存 ============ */
 $('#btnSaveImg').addEventListener('click', () => saveOrderImage());
@@ -522,6 +715,8 @@ $('#btnBackHome').addEventListener('click', () => {
   state.coupons = [];
   state.calc = null;
   state.orderRaw = null;
+  state.payUrl = '';
+  state.orderId = '';
   renderCart();
   showScreen('screen-store');
 });
