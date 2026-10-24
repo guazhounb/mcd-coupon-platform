@@ -1,0 +1,161 @@
+:root{
+  --red:#DA291C;
+  --red-dark:#B51E12;
+  --gold:#FFC72C;
+  --ink:#27251F;
+  --muted:#8A857C;
+  --line:#EFE9E1;
+  --bg:#F4F1ED;
+  --white:#fff;
+  --ok:#1E9E4A;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  background:var(--bg);color:var(--ink);
+  display:flex;justify-content:center;
+}
+.app{
+  width:100%;max-width:480px;min-height:100vh;background:var(--white);
+  position:relative;box-shadow:0 0 30px rgba(0,0,0,.06);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+/* 顶部栏 */
+.topbar{
+  background:var(--red);color:#fff;padding:12px 16px;display:flex;
+  align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.brand{display:flex;align-items:center;gap:8px;}
+.brand-name{font-weight:800;font-size:17px;letter-spacing:.5px;}
+.account{font-size:13px;opacity:.92;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 屏幕切换 */
+.screen{display:none;flex:1;overflow-y:auto;}
+.screen.active{display:flex;flex-direction:column;animation:fade .25s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.pad{padding:16px;}
+/* 登录 */
+.login-wrap{padding:48px 28px;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.login-logo{margin-bottom:8px;}
+.login-title{margin:6px 0 2px;font-size:26px;font-weight:900;color:var(--red);}
+.login-sub{margin:0 0 28px;color:var(--muted);font-size:13px;}
+.form{width:100%;text-align:left;}
+.form label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px;}
+.form input{
+  width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;
+  font-size:15px;outline:none;transition:border .15s;background:#FBFAF8;
+}
+.form input:focus{border-color:var(--gold);}
+.login-note{margin-top:18px;font-size:12px;color:var(--muted);line-height:1.6;}
+.login-err{color:var(--red);font-size:13px;min-height:18px;margin:8px 0 0;}
+/* 按钮 */
+.btn{border:none;border-radius:24px;padding:13px 18px;font-size:15px;font-weight:700;cursor:pointer;width:100%;transition:transform .08s,filter .15s;}
+.btn:active{transform:scale(.98);}
+.btn-primary{background:var(--red);color:#fff;}
+.btn-primary:hover{filter:brightness(1.05);}
+.btn-gold{background:var(--gold);color:var(--ink);}
+.btn-ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line);}
+.btn:disabled{opacity:.55;cursor:not-allowed;}
+/* 区块标题 */
+.section-title{font-size:16px;font-weight:800;margin:8px 0 12px;color:var(--ink);}
+.muted{color:var(--muted);font-size:13px;}
+/* 分段控件 */
+.seg{display:flex;background:#F1ECE4;border-radius:12px;padding:4px;gap:4px;}
+.seg-btn{flex:1;border:none;background:transparent;border-radius:9px;padding:9px 4px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
+.seg-btn.active{background:var(--white);color:var(--red);box-shadow:0 1px 4px rgba(0,0,0,.08);}
+/* 搜索框 */
+.search-box{margin:14px 0 6px;}
+.search-box .row{display:flex;gap:8px;margin-bottom:10px;}
+.search-box input{flex:1;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;outline:none;background:#FBFAF8;}
+.search-box input:focus{border-color:var(--gold);}
+/* 门店卡片 */
+.store-list{display:flex;flex-direction:column;gap:10px;margin-top:6px;padding-bottom:20px;}
+.store-card{border:1.5px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;transition:border .15s,background .15s;}
+.store-card:hover{border-color:var(--gold);}
+.store-card.sel{border-color:var(--red);background:#FFF6F4;}
+.store-name{font-weight:800;font-size:15px;margin-bottom:4px;}
+.store-meta{font-size:12px;color:var(--muted);line-height:1.6;}
+.store-dist{color:var(--red);font-weight:700;}
+.store-pick{margin-top:10px;text-align:right;color:var(--red);font-weight:800;font-size:14px;}
+/* 领券 */
+.claim-banner{display:flex;align-items:center;gap:10px;background:#FFF6F4;border:1.5px solid #FFD9D2;border-radius:12px;padding:12px 14px;font-size:14px;color:var(--red-dark);}
+.spinner{width:18px;height:18px;border:3px solid #FFD9D2;border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.coupon-summary{margin:12px 0;font-size:14px;font-weight:700;color:var(--ok);}
+.useall-row{margin:12px 0;padding:10px 12px;background:#FFF9EC;border-radius:10px;}
+.switch{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer;}
+.switch input{width:18px;height:18px;accent-color:var(--red);}
+.coupon-list{display:flex;flex-direction:column;gap:10px;padding-bottom:80px;}
+.coupon-card{border:1.5px dashed var(--gold);border-radius:14px;padding:12px 14px;background:#FFFBF0;position:relative;}
+.coupon-title{font-weight:800;font-size:15px;color:var(--red-dark);}
+.coupon-meta{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6;}
+.coupon-tag{position:absolute;top:12px;right:12px;background:var(--red);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;}
+/* 点餐布局 */
+.menu-layout{flex:1;display:flex;flex-direction:column;}
+.menu-main{flex:1;overflow-y:auto;padding:12px;}
+.cat-tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;position:sticky;top:0;background:#fff;z-index:2;}
+.cat-tab{border:none;background:#F1ECE4;color:var(--muted);border-radius:18px;padding:7px 14px;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;}
+.cat-tab.active{background:var(--red);color:#fff;}
+.meal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-bottom:14px;}
+.meal-card{border:1.5px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;display:flex;flex-direction:column;}
+.meal-img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#f3f0ec;}
+.meal-body{padding:8px 10px 10px;}
+.meal-name{font-size:13px;font-weight:700;line-height:1.35;height:36px;overflow:hidden;}
+.meal-tags{font-size:11px;color:var(--gold);margin:3px 0;}
+.meal-price{display:flex;align-items:baseline;gap:6px;margin-top:2px;}
+.meal-price .now{color:var(--red);font-weight:900;font-size:16px;}
+.meal-price .now small{font-size:11px;font-weight:700;}
+.meal-price .old{color:var(--muted);text-decoration:line-through;font-size:11px;}
+.meal-add{margin-top:8px;width:100%;background:var(--red);color:#fff;border:none;border-radius:18px;padding:7px;font-weight:800;font-size:13px;cursor:pointer;}
+.meal-add.on{background:var(--gold);color:var(--ink);}
+/* 餐篮 */
+.cart{width:100%;border-top:1.5px solid var(--line);background:#fff;flex-shrink:0;}
+.cart-head{font-weight:800;font-size:14px;padding:12px 14px 6px;display:flex;align-items:center;gap:8px;}
+.badge{background:var(--red);color:#fff;border-radius:10px;font-size:11px;padding:1px 7px;}
+.cart-items{max-height:34vh;overflow-y:auto;padding:0 14px;}
+.cart-item{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);}
+.cart-item .ci-name{flex:1;font-size:13px;font-weight:600;line-height:1.3;}
+.cart-item .ci-price{font-size:12px;color:var(--muted);}
+.stepper{display:flex;align-items:center;gap:8px;}
+.stepper button{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--red);background:#fff;color:var(--red);font-weight:900;font-size:15px;cursor:pointer;line-height:1;}
+.stepper .qty{min-width:18px;text-align:center;font-weight:800;font-size:14px;}
+.cart-foot{padding:10px 14px 16px;border-top:1px solid var(--line);}
+.cart-total{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--muted);margin-bottom:10px;}
+.cart-total b{color:var(--red);font-size:20px;}
+/* 结算 */
+.checkout-store{background:#FFF6F4;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.7;margin-bottom:14px;}
+.checkout-items{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.ci-row{display:flex;justify-content:space-between;font-size:14px;padding:6px 0;border-bottom:1px dashed var(--line);}
+.ci-row .ci-sub{color:var(--muted);font-size:12px;}
+.checkout-coupons{background:#FFFBF0;border:1.5px dashed var(--gold);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:13px;}
+.checkout-coupons .cc-item{display:flex;justify-content:space-between;padding:3px 0;}
+.field-box{margin-bottom:14px;}
+.field-label{font-size:13px;font-weight:700;margin-bottom:8px;}
+.field-box input{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;outline:none;}
+.price-breakdown{background:#27251F;color:#fff;border-radius:14px;padding:16px;margin-bottom:80px;}
+.price-breakdown .pb-row{display:flex;justify-content:space-between;font-size:14px;padding:5px 0;color:#E9E4DC;}
+.price-breakdown .pb-row.discount{color:var(--gold);}
+.price-breakdown .pb-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;padding-top:10px;border-top:1px solid #4A463E;font-size:16px;}
+.price-breakdown .pb-total b{color:var(--gold);font-size:24px;}
+/* 订单结果 */
+.order-done{text-align:center;padding:18px 0 10px;}
+.order-done .check{width:56px;height:56px;border-radius:50%;background:var(--ok);color:#fff;font-size:30px;line-height:56px;margin:0 auto 10px;}
+.order-done h2{margin:6px 0 2px;font-size:20px;}
+.order-info{background:#FBFAF8;border:1.5px solid var(--line);border-radius:14px;padding:14px;font-size:13px;line-height:1.8;margin-bottom:16px;}
+.order-info .oi-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line);}
+.order-info .oi-row:last-child{border-bottom:none;}
+.order-info .qr{text-align:center;margin-top:10px;}
+.order-info .qr img{max-width:160px;border:8px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.order-info a{color:var(--red);word-break:break-all;}
+/* 底部固定操作 */
+.sticky-actions{position:sticky;bottom:0;display:flex;gap:10px;padding:12px 16px;background:#fff;border-top:1px solid var(--line);}
+.sticky-actions.col{flex-direction:column;}
+.sticky-actions .btn{width:auto;flex:1;}
+/* 地址 */
+.addr-box{margin:14px 0;}
+.addr-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+.addr-card{border:1.5px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;}
+.addr-card.sel{border-color:var(--red);background:#FFF6F4;}
+/* toast */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(39,37,31,.94);color:#fff;padding:11px 18px;border-radius:22px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:80%;text-align:center;}
+.toast.show{opacity:1;}
