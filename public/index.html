@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>麦麦优惠管家 · 优惠点餐一体化</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- 顶部品牌栏 -->
+    <header class="topbar" id="topbar" style="display:none">
+      <div class="brand">
+        <span class="arch" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="26" height="26"><path d="M8 56 Q8 16 20 16 Q32 16 32 42 Q32 16 44 16 Q56 16 56 56" fill="none" stroke="#FFC72C" stroke-width="10" stroke-linecap="round"/></svg>
+        </span>
+        <span class="brand-name">麦麦优惠管家</span>
+      </div>
+      <div class="account" id="accountTag"></div>
+    </header>
+
+    <!-- 屏幕：登录 -->
+    <section class="screen active" id="screen-login">
+      <div class="login-wrap">
+        <div class="login-logo">
+          <svg viewBox="0 0 64 64" width="64" height="64"><path d="M8 56 Q8 16 20 16 Q32 16 32 42 Q32 16 44 16 Q56 16 56 56" fill="none" stroke="#FFC72C" stroke-width="10" stroke-linecap="round"/></svg>
+        </div>
+        <h1 class="login-title">麦麦优惠管家</h1>
+        <p class="login-sub">优惠点餐一体化平台 · 领券 · 点餐 · 省钱</p>
+        <div class="form">
+          <label>麦当劳会员账号</label>
+          <input id="loginAccount" type="text" placeholder="请输入账号" autocomplete="username" />
+          <label>密码</label>
+          <input id="loginPassword" type="password" placeholder="请输入密码" autocomplete="current-password" />
+          <button class="btn btn-primary" id="btnLogin">登 录</button>
+        </div>
+        <p class="login-note">登录即授权使用您的会员权益，开启一键领券与点餐。</p>
+        <p class="login-err" id="loginErr"></p>
+      </div>
+    </section>
+
+    <!-- 屏幕：选门店 -->
+    <section class="screen" id="screen-store">
+      <div class="pad">
+        <h2 class="section-title">选择取餐方式</h2>
+        <div class="seg" id="beTypeSeg">
+          <button class="seg-btn active" data-be="1">到店自取</button>
+          <button class="seg-btn" data-be="5">得来速</button>
+          <button class="seg-btn" data-be="2">麦乐送</button>
+          <button class="seg-btn" data-be="6">企业团餐</button>
+        </div>
+
+        <!-- 到店 / 得来速：按位置搜门店 -->
+        <div id="searchBox" class="search-box">
+          <div class="row">
+            <input id="cityInput" type="text" placeholder="城市，如 北京" value="北京" />
+            <input id="kwInput" type="text" placeholder="位置关键词，如 朝阳" value="朝阳" />
+          </div>
+          <button class="btn btn-primary" id="btnSearchStore">查找附近门店</button>
+        </div>
+
+        <!-- 外送 / 团餐：先选地址 -->
+        <div id="addrBox" class="addr-box" style="display:none">
+          <button class="btn btn-primary" id="btnLoadAddr">加载我的配送地址</button>
+          <div id="addrList" class="addr-list"></div>
+        </div>
+
+        <h2 class="section-title">可点餐门店</h2>
+        <div id="storeList" class="store-list"><p class="muted">请先查找门店</p></div>
+      </div>
+    </section>
+
+    <!-- 屏幕：领券 + 可用优惠 -->
+    <section class="screen" id="screen-coupons">
+      <div class="pad">
+        <h2 class="section-title">专属优惠已就位</h2>
+        <div class="claim-banner" id="claimBanner">
+          <div class="spinner"></div>
+          <span>正在为您自动领取所有可用优惠券…</span>
+        </div>
+        <div class="coupon-summary" id="couponSummary"></div>
+
+        <div class="useall-row">
+          <label class="switch">
+            <input type="checkbox" id="useAllCoupons" checked />
+            <span>结算时自动使用全部可用优惠券</span>
+          </label>
+        </div>
+
+        <h2 class="section-title">当前门店可用优惠</h2>
+        <div id="storeCouponList" class="coupon-list"><p class="muted">加载中…</p></div>
+
+        <div class="sticky-actions">
+          <button class="btn btn-primary" id="btnToMenu">去点餐 →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 屏幕：点餐 -->
+    <section class="screen" id="screen-menu">
+      <div class="menu-layout">
+        <div class="menu-main">
+          <div class="cat-tabs" id="catTabs"></div>
+          <div id="mealGrid" class="meal-grid"></div>
+        </div>
+        <aside class="cart" id="cartPanel">
+          <div class="cart-head">我的餐篮 <span id="cartCount" class="badge">0</span></div>
+          <div id="cartItems" class="cart-items"><p class="muted">还没有添加餐品</p></div>
+          <div class="cart-foot">
+            <div class="cart-total">预估合计 <b id="cartTotal">¥0.00</b></div>
+            <button class="btn btn-gold" id="btnCheckout">使用优惠结算</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 屏幕：结算预览 -->
+    <section class="screen" id="screen-checkout">
+      <div class="pad">
+        <h2 class="section-title">核对订单</h2>
+        <div id="checkoutStore" class="checkout-store"></div>
+        <div id="checkoutItems" class="checkout-items"></div>
+        <div id="checkoutCoupons" class="checkout-coupons"></div>
+
+        <div id="takeWayBox" class="field-box">
+          <div class="field-label">取餐方式</div>
+          <div class="seg" id="takeWaySeg"></div>
+        </div>
+        <div id="remarkBox" class="field-box" style="display:none">
+          <div class="field-label">订单备注</div>
+          <input id="remarkInput" type="text" placeholder="如：无接触配送" maxlength="50" />
+        </div>
+
+        <div class="price-breakdown" id="priceBreakdown"></div>
+
+        <div class="sticky-actions">
+          <button class="btn btn-ghost" id="btnBackMenu">返回</button>
+          <button class="btn btn-primary" id="btnSubmitOrder">提交订单</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 屏幕：订单结果 -->
+    <section class="screen" id="screen-order">
+      <div class="pad">
+        <div class="order-done">
+          <div class="check">✓</div>
+          <h2>下单成功</h2>
+          <p class="muted">请按支付链接完成付款</p>
+        </div>
+        <div id="orderInfo" class="order-info"></div>
+        <div class="sticky-actions col">
+          <button class="btn btn-gold" id="btnSaveImg">一键保存订单小票</button>
+          <button class="btn btn-ghost" id="btnCopyOrder">复制订单信息</button>
+          <button class="btn btn-ghost" id="btnCancelOrder">取消该订单</button>
+          <button class="btn btn-ghost" id="btnBackHome">返回首页</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
